@@ -1,6 +1,5 @@
 import numpy as np
 
-
 class Layer:
     """
     Base class for layers in the network.
@@ -9,7 +8,6 @@ class Layer:
 
         `inbound_layers`: A list of layers with edges into this layer.
     """
-
     def __init__(self, inbound_layers=[]):
         """
         Layer's constructor (runs when the object is instantiated). Sets
@@ -50,7 +48,6 @@ class Input(Layer):
     """
     A generic input into the network.
     """
-
     def __init__(self):
         # The base class constructor has to run to set all
         # the properties here.
@@ -71,15 +68,12 @@ class Input(Layer):
         # Weights and bias may be inputs, so you need to sum
         # the gradient from output gradients.
         for n in self.outbound_layers:
-            grad_cost = n.gradients[self]
-            self.gradients[self] += grad_cost * 1
-
+            self.gradients[self] += n.gradients[self]
 
 class Linear(Layer):
     """
     Represents a layer that performs a linear transform.
     """
-
     def __init__(self, X, W, b):
         # The base class (Layer) constructor. Weights and bias
         # are treated like inbound layers.
@@ -117,7 +111,6 @@ class Sigmoid(Layer):
     """
     Represents a layer that performs the sigmoid activation function.
     """
-
     def __init__(self, layer):
         # The base class constructor.
         Layer.__init__(self, [layer])
@@ -145,11 +138,11 @@ class Sigmoid(Layer):
         """
         # Initialize the gradients to 0.
         self.gradients = {n: np.zeros_like(n.value) for n in self.inbound_layers}
+        # Sum the partial with respect to the input over all the outputs.
         for n in self.outbound_layers:
             grad_cost = n.gradients[self]
-            s = self.value
-            for i in self.inbound_layers:
-                self.gradients[i] += s * (1-s) * grad_cost
+            sigmoid = self.value
+            self.gradients[self.inbound_layers[0]] += sigmoid * (1 - sigmoid) * grad_cost
 
 
 class MSE(Layer):
@@ -180,14 +173,11 @@ class MSE(Layer):
         self.m = self.inbound_layers[0].value.shape[0]
         # Save the computed output for backward.
         self.diff = y - a
-        self.value = np.mean(self.diff ** 2)
+        self.value = np.mean(self.diff**2)
 
     def backward(self):
         """
         Calculates the gradient of the cost.
-
-        This is the final layer of the network so outbound layers
-        are not a concern.
         """
         self.gradients[self.inbound_layers[0]] = (2 / self.m) * self.diff
         self.gradients[self.inbound_layers[1]] = (-2 / self.m) * self.diff
@@ -252,3 +242,15 @@ def forward_and_backward(graph):
     for n in graph[::-1]:
         n.backward()
 
+
+def sgd_update(trainables, learning_rate=1e-2):
+    """
+    Updates the value of each trainable with SGD.
+
+    Arguments:
+
+        `trainables`: A list of `Input` Layers representing weights/biases.
+        `learning_rate`: The learning rate.
+    """
+    for t in trainables:
+        t.value -= learning_rate * t.gradients[t]
