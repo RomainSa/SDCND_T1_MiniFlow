@@ -61,10 +61,9 @@ class Linear(Neuron):
         """
         Set self.value to the value of the linear function output.
         """
-        self.value = 0
+        self.value = self.bias.value
         for n, w in zip(self.inbound_neurons, self.weights):
             self.value += w.value * n.value
-        self.value += self.bias.value
 
 
 def topological_sort(feed_dict):
